@@ -1,28 +1,16 @@
 from flask import Flask, request, redirect
 from flask_sqlalchemy import SQLAlchemy
-import os, urllib
+import os
 
 app = Flask(__name__)
 
-# Read values from Azure App Service environment variables
-server = os.environ.get("AZURE_SQL_SERVER")
-database = os.environ.get("AZURE_SQL_DATABASE")
-username = os.environ.get("AZURE_SQL_USER")
-password = os.environ.get("AZURE_SQL_PASSWORD")
-port = os.environ.get("AZURE_SQL_PORT", "1433")
-
-# URL encode the password (important if it has special characters like $ or !)
-password = urllib.parse.quote_plus(password)
-
-# Build the connection string
-db_url = f"mssql+pyodbc://{username}:{password}@{server}:{port}/{database}?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes&TrustServerCertificate=no"
-
-app.config["SQLALCHEMY_DATABASE_URI"] = db_url
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+# Get DB connection string from Azure (App Service → Configuration)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Table definition
+# Table for contact messages
 class Contact(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100))
@@ -54,6 +42,3 @@ def home():
 def initdb():
     db.create_all()
     return "Database initialized!"
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
