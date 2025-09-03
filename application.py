@@ -1,15 +1,24 @@
 from flask import Flask, request, redirect
 from flask_sqlalchemy import SQLAlchemy
+import os, urllib
 
 app = Flask(__name__)
 
-# Direct connection to your Azure SQL DB
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    "mssql+pyodbc://user11:Pranith29402941"
-    "@thakur3543.database.windows.net:1433/prs"
-    "?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes&TrustServerCertificate=no"
-)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Read values from Azure App Service environment variables
+server = os.environ.get("AZURE_SQL_SERVER")
+database = os.environ.get("AZURE_SQL_DATABASE")
+username = os.environ.get("AZURE_SQL_USER")
+password = os.environ.get("AZURE_SQL_PASSWORD")
+port = os.environ.get("AZURE_SQL_PORT", "1433")
+
+# URL encode the password (important if it has special characters like $ or !)
+password = urllib.parse.quote_plus(password)
+
+# Build the connection string
+db_url = f"mssql+pyodbc://{username}:{password}@{server}:{port}/{database}?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes&TrustServerCertificate=no"
+
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
@@ -41,7 +50,6 @@ def home():
         </form>
     '''
 
-# Initialize DB (run this once)
 @app.route("/initdb")
 def initdb():
     db.create_all()
